@@ -2,11 +2,11 @@
 ## Specifications
 The core idea is a simple filesharing code that allows quick sending and receiving of files from the cloud. The backend uses sql to manage each users
 filesystem, info manifests and other. The actual code can be altered by the server administrator. The commands are as follows:
- - `mkuser`: Create a new user account. Needs:
+ - `mkuser`: Create a new user account. Needs: ✅
    - `username`: user's name; fs are hidden for other users on the network
    - `password`: user's password
- - `listusrs`: List all users
- - `login`: Login to an existing user account. Needs:
+ - `listusrs`: List all users ✅
+ - `login`: Login to an existing user account. Needs: ✅
    - `username`: user's name
    - `password`: user's password (optional for admins)
  - `ls`: List the contents of the current directory
