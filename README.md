@@ -5,6 +5,7 @@ filesystem, info manifests and other. The actual code can be altered by the serv
  - `mkuser`: Create a new user account. Needs:
    - `username`: user's name; fs are hidden for other users on the network
    - `password`: user's password
+ - `listusrs`: List all users
  - `login`: Login to an existing user account. Needs:
    - `username`: user's name
    - `password`: user's password (optional for admins)

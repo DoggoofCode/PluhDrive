@@ -14,16 +14,14 @@ class Command:
 
 
     def _minimumArguments(self, length: int) -> bool:
-        if len(self.args) >= length:
-            print("Minimum arguments satisfied.")
+        if len(self.args)-1 >= length:
             return True
         else:
             print(f"Minimum arguments not satisfied. Expected {length}, got {len(self.args)}.")
             return False
 
     def _maximumArguments(self, length: int) -> bool:
-        if len(self.args) <= length:
-            print("Maximum arguments satisfied.")
+        if len(self.args)-1 <= length:
             return True
         else:
             print(f"Maximum arguments not satisfied. Expected {length}, got {len(self.args)}.")
@@ -31,7 +29,6 @@ class Command:
 
     def EqArgs(self, min:int, max:int) -> bool:
         if self._minimumArguments(min) and self._maximumArguments(max):
-            print("Arguments satisfied.")
             return True
         else:
             return False
@@ -72,11 +69,24 @@ class AdminTerminal:
         while True:
             command: str = Prompt.ask(f"${self.input_prefix}")
             arguments: Command = self.command_processing(command)
+            USER_ID = None
 
             match arguments.main_argument:
                 case "exec":
                     # No argument limit
                     SQLite_Utils.execute_query(cursor, " ".join(arguments.args[1:]))
+                case "listusrs":
+                    SQLite_Utils.execute_query(cursor, "SELECT * FROM users")
+                case "mkusr":
+                    arguments.EqArgs(2,2)
+                    SQLite_Utils.safe_execute(cursor, "INSERT INTO Users (username, password) VALUES (?, ?)", arguments.args[1:])
+                    SQLite_Utils.safe_insert(cursor, "Users", ("username", "password"), arguments.args[1:])
+                case "delusr_id":
+                    arguments.EqArgs(1,1)
+                    SQLite_Utils.safe_execute(cursor, "DELETE FROM Users WHERE id = ?", arguments.args[1:])
+                case "login":
+                    arguments.EqArgs(1,2)
+                    USER_ID = SQLite_Utils.login(cursor, arguments.args[1:])
                 case "exit":
                     print("[green]Exiting...[/green]")
                     break
