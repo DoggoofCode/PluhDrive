@@ -7,7 +7,7 @@ def main() -> None:
     cursor = connection.cursor()
     SQLite_Utils.check_table_integrity(cursor)
 
-    AdminTerminal("AdminTerminal").begin()
+    AdminTerminal("AdminTerminal").begin(cursor)
 
     # close connection
     connection.close()

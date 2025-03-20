@@ -1,10 +1,17 @@
+import sqlite3
 from rich import print
 from rich.prompt import Prompt
+from DriveUploader.utils import SQLite_Utils
 
 class Command:
     def __init__(self, arguments: list[str], flags: list[str]) -> None:
         self.args = arguments
         self.flags = flags
+
+    @property
+    def main_argument(self) -> str | None:
+        return self.args[0] if self.args else None
+
 
     def _minimumArguments(self, length: int) -> bool:
         if len(self.args) >= length:
@@ -59,9 +66,19 @@ class AdminTerminal:
 
         return arg
 
-    def begin(self) -> None:
+    def begin(self, cursor: sqlite3.Cursor) -> None:
         print("[green]Welcome to the Admin Terminal![/green]")
         arguments: Command
         while True:
             command: str = Prompt.ask(f"${self.input_prefix}")
-            arguments = self.command_processing(command)
+            arguments: Command = self.command_processing(command)
+
+            match arguments.main_argument:
+                case "exec":
+                    # No argument limit
+                    SQLite_Utils.execute_query(cursor, " ".join(arguments.args[1:]))
+                case "exit":
+                    print("[green]Exiting...[/green]")
+                    break
+                case _:
+                    print(f"[red][bold]Unknown command: {arguments.main_argument}[/red][/bold]")

@@ -1,3 +1,6 @@
+import sqlite3
+from rich import print
+
 class SQLite_Utils:
     @staticmethod
     def check_table_integrity(cursor):
@@ -37,3 +40,15 @@ class SQLite_Utils:
                     FOREIGN KEY (location) REFERENCES FileSystems(id)
                 );
                 """)
+
+        cursor.connection.commit()
+
+    @staticmethod
+    def execute_query(cursor: sqlite3.Cursor, query: str):
+        try:
+            command_output = cursor.execute(query)
+            print(f"Command Output: {command_output.fetchall()}")
+        except sqlite3.Error as e:
+            print(f"[red][bold]Error executing query: {e}[/red][/bold]")
+        finally:
+            cursor.connection.commit()
