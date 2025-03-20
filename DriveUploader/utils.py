@@ -7,7 +7,7 @@ class SQLite_Utils:
         cursor.execute("""
                 CREATE TABLE IF NOT EXISTS Users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username VARCHAR NOT NULL,
+                    username VARCHAR NOT NULL UNIQUE,
                     password VARCHAR NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     time_deleted TIMESTAMP DEFAULT NULL
@@ -88,3 +88,32 @@ class SQLite_Utils:
         except sqlite3.Error as e:
             print(f"[red][bold]Error logging in: {e}[/red][/bold]")
             return None
+
+    @staticmethod
+    def make_folder(cursor: sqlite3.Cursor, folder_name: str, user_id: int, parent_id: int = 0):
+        try:
+            cursor.execute("INSERT INTO FileSystems (parent_folder, name, user_id) VALUES (?, ?, ?)", (parent_id, folder_name, user_id))
+        except sqlite3.Error as e:
+            print(f"[red][bold]Error creating folder: {e}[/red][/bold]")
+        finally:
+            cursor.connection.commit()
+
+    @staticmethod
+    def find_username_from_id(cursor: sqlite3.Cursor, user_id: int) -> str:
+        try:
+            cursor.execute("SELECT username FROM Users WHERE id = ?", (user_id,))
+            username = cursor.fetchone()[0]
+            return username
+        except sqlite3.Error as e:
+            print(f"[red][bold]Error finding username: {e}[/red][/bold]")
+            return ""
+
+    @staticmethod
+    def find_id_from_username(cursor: sqlite3.Cursor, username: str) -> int:
+        try:
+            cursor.execute("SELECT id FROM Users WHERE username = ?", (username,))
+            user_id = cursor.fetchone()[0]
+            return user_id
+        except sqlite3.Error as e:
+            print(f"[red][bold]Error finding user ID: {e}[/red][/bold]")
+            return 0

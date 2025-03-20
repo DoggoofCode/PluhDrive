@@ -1,7 +1,7 @@
 import sqlite3
 from rich import print
 from rich.prompt import Prompt
-from DriveUploader.utils import SQLite_Utils
+from DriveUploader.utils import SQLite_Utils as sqlu
 
 class Command:
     def __init__(self, arguments: list[str], flags: list[str]) -> None:
@@ -74,19 +74,26 @@ class AdminTerminal:
             match arguments.main_argument:
                 case "exec":
                     # No argument limit
-                    SQLite_Utils.execute_query(cursor, " ".join(arguments.args[1:]))
+                    sqlu.execute_query(cursor, " ".join(arguments.args[1:]))
                 case "listusrs":
-                    SQLite_Utils.execute_query(cursor, "SELECT * FROM users")
+                    sqlu.execute_query(cursor, "SELECT * FROM users")
                 case "mkusr":
-                    arguments.EqArgs(2,2)
-                    SQLite_Utils.safe_execute(cursor, "INSERT INTO Users (username, password) VALUES (?, ?)", arguments.args[1:])
-                    SQLite_Utils.safe_insert(cursor, "Users", ("username", "password"), arguments.args[1:])
+                    if not arguments.EqArgs(2,2):
+                        print("[red][bold]Invalid arguments[/red][/bold]")
+                        continue
+                    sqlu.safe_insert(cursor, "Users", ("username", "password"), arguments.args[1:])
+                    new_user_id: int = sqlu.find_id_from_username(cursor, arguments.args[1])
+                    sqlu.make_folder(cursor, "Users", new_user_id)
                 case "delusr_id":
-                    arguments.EqArgs(1,1)
-                    SQLite_Utils.safe_execute(cursor, "DELETE FROM Users WHERE id = ?", arguments.args[1:])
+                    if not arguments.EqArgs(1,1):
+                        print("[red][bold]Invalid arguments[/red][/bold]")
+                        continue
+                    sqlu.safe_execute(cursor, "DELETE FROM Users WHERE id = ?", arguments.args[1:])
                 case "login":
-                    arguments.EqArgs(1,2)
-                    USER_ID = SQLite_Utils.login(cursor, arguments.args[1:])
+                    if not arguments.EqArgs(1,2):
+                        print("[red][bold]Invalid arguments[/red][/bold]")
+                        continue
+                    USER_ID = sqlu.login(cursor, arguments.args[1:])
                 case "exit":
                     print("[green]Exiting...[/green]")
                     break
