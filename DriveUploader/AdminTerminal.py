@@ -1,7 +1,8 @@
 import sqlite3
 from rich import print
 from rich.prompt import Prompt
-from DriveUploader.utils import SQLite_Utils as sqlu
+from DriveUploader.utils import Folder, SQLite_Utils as sqlu
+import os
 
 class Command:
     def __init__(self, arguments: list[str], flags: list[str]) -> None:
@@ -24,7 +25,7 @@ class Command:
         if len(self.args)-1 <= length:
             return True
         else:
-            print(f"Maximum arguments not satisfied. Expected {length}, got {len(self.args)}.")
+            print(f"Maximum arguments not satisfied. Expected {length}, got {len(self.args)-1}.")
             return False
 
     def EqArgs(self, min:int, max:int) -> bool:
@@ -67,6 +68,7 @@ class AdminTerminal:
         print("[green]Welcome to the Admin Terminal![/green]")
         arguments: Command
         self.USER_ID = None
+        self.CURRENT_DIRECTORY: int | None = None
         while True:
             command: str = Prompt.ask(f"${self.input_prefix}")
             arguments: Command = self.command_processing(command)
@@ -92,7 +94,7 @@ class AdminTerminal:
                         continue
                     sqlu.safe_insert(cursor, "Users", ("username", "password"), arguments.args[1:])
                     new_user_id: int = sqlu.find_id_from_username(cursor, arguments.args[1])
-                    sqlu.make_folder(cursor, "/", new_user_id)
+                    sqlu.make_folder(cursor, new_user_id, 0,"/", override=True)
                 case "delusr_id":
                     if not arguments.EqArgs(1,1):
                         print("[red][bold]Invalid arguments[/red][/bold]")
@@ -106,23 +108,62 @@ class AdminTerminal:
                     if not self.USER_ID:
                         print("[red][bold]Invalid username or password[/red][/bold]")
                         continue
+                    rt_directory = sqlu.find_root_folder_id(cursor, self.USER_ID)
+                    if not rt_directory:
+                        print("[red][bold]Root directory not found[/red][/bold]")
+                        continue
+                    self.CURRENT_DIRECTORY = rt_directory
+
                     print(f"[blue][bold]Logged in as {sqlu.find_username_from_id(cursor, self.USER_ID)}[/blue][/bold]")
                 case "logout":
                     self.USER_ID = None
+                    self.CURRENT_DIRECTORY = None
                 case "whoami":
                     if not self.USER_ID:
                         print("[red][bold]Not logged in[/red][/bold]")
                     else:
                         print(f"[green][bold]Logged in as {sqlu.find_username_from_id(cursor, self.USER_ID)}[/green][/bold]")
                 case "ls":
-                    if not arguments.EqArgs(0,1) or not self.USER_ID:
+                    if not arguments.EqArgs(0,1):
                         print("[red][bold]Invalid arguments[/red][/bold]")
                         continue
-                    sqlu.list_files(cursor, self.USER_ID, args=arguments.flags)
+                    if not self.USER_ID:
+                        print("[red][bold]Not logged in[/red][/bold]")
+                        continue
+                    if len(arguments.args) == 1:
+                        f_list: Folder = sqlu.list_files(cursor, self.USER_ID, args=arguments.flags)
+                    else:
+                        f_list: Folder = sqlu.list_files(cursor, self.USER_ID, main_location=arguments.args[1], args=arguments.flags)
+
+                    sqlu.print_folder(f_list)
+
+                case "cd":
+                    if not arguments.EqArgs(1,1):
+                        print("[red][bold]Invalid arguments[/red][/bold]")
+                        continue
+                    if not self.USER_ID or self.CURRENT_DIRECTORY is None:
+                        print("[red][bold]Not logged in[/red][/bold]")
+                        continue
+                    self.CURRENT_DIRECTORY
+                    new_possible_directory = sqlu.change_directory(cursor, self.USER_ID, self.CURRENT_DIRECTORY, arguments.args[1])
+                    if new_possible_directory is None:
+                        pass
+                    else:
+                        self.CURRENT_DIRECTORY = new_possible_directory
+                case "mkdir":
+                    if not arguments.EqArgs(1,1):
+                        print("[red][bold]Invalid arguments[/red][/bold]")
+                        continue
+                    if not self.USER_ID or self.CURRENT_DIRECTORY is None:
+                        print("[red][bold]Not logged in[/red][/bold]")
+                        continue
+                    sqlu.make_folder(cursor, self.USER_ID, self.CURRENT_DIRECTORY, arguments.args[1])
                 case "clear":
-                    print("\x1bc")
+                    os.system('cls' if os.name == 'nt' else 'clear')
                 case "exit":
                     print("[green]Exiting...[/green]")
                     break
+                case "pwd":
+                    print(f"[green][bold]{sqlu.id_to_foldername(cursor, self.USER_ID, self.CURRENT_DIRECTORY)}[/green][/bold]")
                 case _:
                     print(f"[red][bold]Unknown command: {arguments.main_argument}[/red][/bold]")
