@@ -66,15 +66,24 @@ class AdminTerminal:
     def begin(self, cursor: sqlite3.Cursor) -> None:
         print("[green]Welcome to the Admin Terminal![/green]")
         arguments: Command
+        self.USER_ID = None
         while True:
             command: str = Prompt.ask(f"${self.input_prefix}")
             arguments: Command = self.command_processing(command)
-            USER_ID = None
+
 
             match arguments.main_argument:
                 case "exec":
                     # No argument limit
                     sqlu.execute_query(cursor, " ".join(arguments.args[1:]))
+                case "pexec":
+                    # No argument limit
+                    try:
+                        exec(" ".join(arguments.args[1:]))
+                    except NameError:
+                        sqlu.util_execute(cursor, " ".join(arguments.args[1:]))
+                    except Exception as e:
+                        print(f"[red][bold]Error[/red][/bold]: {e}")
                 case "listusrs":
                     sqlu.execute_query(cursor, "SELECT * FROM users")
                 case "mkusr":
@@ -83,7 +92,7 @@ class AdminTerminal:
                         continue
                     sqlu.safe_insert(cursor, "Users", ("username", "password"), arguments.args[1:])
                     new_user_id: int = sqlu.find_id_from_username(cursor, arguments.args[1])
-                    sqlu.make_folder(cursor, "Users", new_user_id)
+                    sqlu.make_folder(cursor, "/", new_user_id)
                 case "delusr_id":
                     if not arguments.EqArgs(1,1):
                         print("[red][bold]Invalid arguments[/red][/bold]")
@@ -93,7 +102,25 @@ class AdminTerminal:
                     if not arguments.EqArgs(1,2):
                         print("[red][bold]Invalid arguments[/red][/bold]")
                         continue
-                    USER_ID = sqlu.login(cursor, arguments.args[1:])
+                    self.USER_ID = sqlu.login(cursor, arguments.args[1:])
+                    if not self.USER_ID:
+                        print("[red][bold]Invalid username or password[/red][/bold]")
+                        continue
+                    print(f"[blue][bold]Logged in as {sqlu.find_username_from_id(cursor, self.USER_ID)}[/blue][/bold]")
+                case "logout":
+                    self.USER_ID = None
+                case "whoami":
+                    if not self.USER_ID:
+                        print("[red][bold]Not logged in[/red][/bold]")
+                    else:
+                        print(f"[green][bold]Logged in as {sqlu.find_username_from_id(cursor, self.USER_ID)}[/green][/bold]")
+                case "ls":
+                    if not arguments.EqArgs(0,1) or not self.USER_ID:
+                        print("[red][bold]Invalid arguments[/red][/bold]")
+                        continue
+                    sqlu.list_files(cursor, self.USER_ID, args=arguments.flags)
+                case "clear":
+                    print("\x1bc")
                 case "exit":
                     print("[green]Exiting...[/green]")
                     break
