@@ -1,7 +1,7 @@
 import sqlite3
 from rich import print
 from rich.prompt import Prompt
-from DriveUploader.utils import Folder, SQLite_Utils as sqlu
+from DriveUploader.utils import Folder, SQLite_Utils as sqlu, HelperFunctions, TerminalCommands
 import os
 
 class Command:
@@ -77,7 +77,7 @@ class AdminTerminal:
             match arguments.main_argument:
                 case "exec":
                     # No argument limit
-                    sqlu.execute_query(cursor, " ".join(arguments.args[1:]))
+                    sqlu.safe_execute_query(cursor, " ".join(arguments.args[1:]))
                 case "pexec":
                     # No argument limit
                     try:
@@ -87,13 +87,13 @@ class AdminTerminal:
                     except Exception as e:
                         print(f"[red][bold]Error[/red][/bold]: {e}")
                 case "listusrs":
-                    sqlu.execute_query(cursor, "SELECT * FROM users")
+                    sqlu.safe_execute_query(cursor, "SELECT * FROM users")
                 case "mkusr":
                     if not arguments.EqArgs(2,2):
                         print("[red][bold]Invalid arguments[/red][/bold]")
                         continue
                     sqlu.safe_insert(cursor, "Users", ("username", "password"), arguments.args[1:])
-                    new_user_id: int = sqlu.find_id_from_username(cursor, arguments.args[1])
+                    new_user_id: int = HelperFunctions.find_id_from_username(cursor, arguments.args[1])
                     sqlu.make_folder(cursor, new_user_id, 0,"/", override=True)
                 case "delusr_id":
                     if not arguments.EqArgs(1,1):
@@ -104,17 +104,17 @@ class AdminTerminal:
                     if not arguments.EqArgs(1,2):
                         print("[red][bold]Invalid arguments[/red][/bold]")
                         continue
-                    self.USER_ID = sqlu.login(cursor, arguments.args[1:])
+                    self.USER_ID = TerminalCommands.login(cursor, arguments.args[1:])
                     if not self.USER_ID:
                         print("[red][bold]Invalid username or password[/red][/bold]")
                         continue
-                    rt_directory = sqlu.find_root_folder_id(cursor, self.USER_ID)
+                    rt_directory = HelperFunctions.find_root_folder_id(cursor, self.USER_ID)
                     if not rt_directory:
                         print("[red][bold]Root directory not found[/red][/bold]")
                         continue
                     self.CURRENT_DIRECTORY = rt_directory
 
-                    print(f"[blue][bold]Logged in as {sqlu.find_username_from_id(cursor, self.USER_ID)}[/blue][/bold]")
+                    print(f"[blue][bold]Logged in as {HelperFunctions.find_username_from_id(cursor, self.USER_ID)}[/blue][/bold]")
                 case "logout":
                     self.USER_ID = None
                     self.CURRENT_DIRECTORY = None
@@ -122,7 +122,7 @@ class AdminTerminal:
                     if not self.USER_ID:
                         print("[red][bold]Not logged in[/red][/bold]")
                     else:
-                        print(f"[green][bold]Logged in as {sqlu.find_username_from_id(cursor, self.USER_ID)}[/green][/bold]")
+                        print(f"[green][bold]Logged in as {HelperFunctions.find_username_from_id(cursor, self.USER_ID)}[/green][/bold]")
                 case "ls":
                     if not arguments.EqArgs(0,1):
                         print("[red][bold]Invalid arguments[/red][/bold]")
@@ -136,7 +136,6 @@ class AdminTerminal:
                         f_list: Folder = sqlu.list_files(cursor, self.USER_ID, main_location=arguments.args[1], args=arguments.flags)
 
                     sqlu.print_folder(f_list)
-
                 case "cd":
                     if not arguments.EqArgs(1,1):
                         print("[red][bold]Invalid arguments[/red][/bold]")
@@ -164,6 +163,9 @@ class AdminTerminal:
                     print("[green]Exiting...[/green]")
                     break
                 case "pwd":
-                    print(f"[green][bold]{sqlu.id_to_foldername(cursor, self.USER_ID, self.CURRENT_DIRECTORY)}[/green][/bold]")
+                    if self.USER_ID is None or self.CURRENT_DIRECTORY is None:
+                        print("[red][bold]Not logged in[/red][/bold]")
+                        continue
+                    print(f"[green][bold]{HelperFunctions.id_to_foldername(cursor, self.USER_ID, self.CURRENT_DIRECTORY)}[/green][/bold]")
                 case _:
                     print(f"[red][bold]Unknown command: {arguments.main_argument}[/red][/bold]")
