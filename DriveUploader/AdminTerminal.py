@@ -40,8 +40,9 @@ class Command:
 
 
 class AdminTerminal:
-    def __init__(self, prefix: str) -> None:
+    def __init__(self, prefix: str, cursor: sqlite3.Cursor) -> None:
         self.input_prefix = prefix
+        self.cursor: sqlite3.Cursor = cursor
 
     def command_processing(self, command: str) -> Command:
         argumentised: list[str] = command.lower().split()
@@ -64,11 +65,19 @@ class AdminTerminal:
 
         return arg
 
-    def begin(self, cursor: sqlite3.Cursor) -> None:
+    @property
+    def login_check(self) -> bool:
+        if self.USER_ID is None or self.CURRENT_DIRECTORY is None:
+            print("[red][bold]Not logged in[/red][/bold]")
+            return False
+        return True
+
+    def begin(self) -> None:
         print("[green]Welcome to the Admin Terminal![/green]")
         arguments: Command
         self.USER_ID = None
         self.CURRENT_DIRECTORY: int | None = None
+        cursor = self.cursor
         while True:
             command: str = Prompt.ask(f"${self.input_prefix}")
             arguments: Command = self.command_processing(command)
@@ -87,7 +96,7 @@ class AdminTerminal:
                     except Exception as e:
                         print(f"[red][bold]Error[/red][/bold]: {e}")
                 case "listusrs":
-                    sqlu.safe_execute_query(cursor, "SELECT * FROM users")
+                    sqlu.safe_execute_query(cursor, "SELECT * FROM Users")
                 case "mkusr":
                     if not arguments.EqArgs(2,2):
                         print("[red][bold]Invalid arguments[/red][/bold]")
@@ -150,13 +159,20 @@ class AdminTerminal:
                     else:
                         self.CURRENT_DIRECTORY = new_possible_directory
                 case "mkdir":
+                    if not self.login_check:
+                        continue
                     if not arguments.EqArgs(1,1):
                         print("[red][bold]Invalid arguments[/red][/bold]")
                         continue
-                    if not self.USER_ID or self.CURRENT_DIRECTORY is None:
-                        print("[red][bold]Not logged in[/red][/bold]")
-                        continue
                     sqlu.make_folder(cursor, self.USER_ID, self.CURRENT_DIRECTORY, arguments.args[1])
+                case "mkfile":
+                    if not self.login_check:
+                        continue
+                    if not arguments.EqArgs(1,2):
+                        print("[red][bold]Invalid arguments[/red][/bold]")
+                        continue
+                    # path then name
+                    sqlu.make_file(cursor, self.USER_ID, self.CURRENT_DIRECTORY, arguments.args[1], arguments.args[2])
                 case "clear":
                     os.system('cls' if os.name == 'nt' else 'clear')
                 case "exit":

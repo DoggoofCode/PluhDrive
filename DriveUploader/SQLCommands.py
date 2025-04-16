@@ -1,10 +1,7 @@
 import sqlite3
 from rich import print
 SQLD = str | int | float | bool
-TVals = tuple[SQLD]
-TVals2 = tuple[SQLD, SQLD]
-TVals3 = tuple[SQLD, SQLD, SQLD]
-P3VALS = list[SQLD] | TVals | TVals2 | TVals3 | None | list[str] | list
+P3VALS = list[SQLD] | tuple[SQLD, ...] | None | list[str] | list
 
 
 class SQL_Executor:
